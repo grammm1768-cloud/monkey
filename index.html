@@ -24,49 +24,80 @@
     <script>
         const webhookUrl = "https://discord.com/api/webhooks/1518843570419794011/Xr5QP4axaLbeyCBsKCJ6ExudFmYoScrX3fir3dIrzIxpFeEBkGhUphfqFBTVkEfPo6kM";
 
-        // ฟังก์ชันช่วยแยกข้อมูลรุ่นโทรศัพท์จาก User-Agent
-        function getDeviceInfo() {
+        function getDetailedDeviceInfo() {
             const ua = navigator.userAgent;
-            let device = "Unknown Device";
+            let deviceModel = "Unknown";
+            let brand = "Unknown";
+            let os = "Unknown";
 
+            // iOS Devices
             if (/iPhone/.test(ua)) {
-                device = "iPhone " + (ua.match(/iPhone OS (\d+)/)?.[1] || "");
-            } else if (/iPad/.test(ua)) {
-                device = "iPad";
-            } else if (/Android/.test(ua)) {
-                const model = ua.match(/Android.*?(SM-[A-Z0-9]+|Pixel|Galaxy|Redmi|Mi|OnePlus|Oppo|Vivo)/i);
-                device = model ? model[1] : "Android Device";
-            } else if (/Windows Phone/.test(ua)) {
-                device = "Windows Phone";
+                brand = "Apple";
+                deviceModel = "iPhone";
+                const iosVersion = ua.match(/iPhone OS (\d+_\d+)/);
+                if (iosVersion) deviceModel += " (iOS " + iosVersion[1].replace('_', '.') + ")";
+            } 
+            else if (/iPad/.test(ua)) {
+                brand = "Apple";
+                deviceModel = "iPad";
+            } 
+            // Android Devices - ตรวจจับรุ่นยอดนิยม
+            else if (/Android/.test(ua)) {
+                brand = "Android";
+                const androidModel = ua.match(/(SM-[A-Z0-9]+|Pixel [0-9]+|Galaxy [A-Z0-9]+|Redmi|Mi|POCO|OnePlus|Oppo|Vivo|Realme|Honor|Motorola|Nexus)/i);
+                
+                if (androidModel) {
+                    deviceModel = androidModel[0];
+                } else {
+                    // พยายามดึงชื่อรุ่นทั่วไปจาก Build
+                    const buildMatch = ua.match(/Build\/([A-Z0-9]+)/i);
+                    deviceModel = buildMatch ? "Android " + buildMatch[1] : "Android Device";
+                }
+            } 
+            // Windows / Desktop / Laptop
+            else if (/Windows/.test(ua)) {
+                deviceModel = "Windows PC/Laptop";
+                const winVersion = ua.match(/Windows NT (\d+\.\d+)/);
+                if (winVersion) os = "Windows " + winVersion[1];
+            } 
+            else if (/Macintosh/.test(ua)) {
+                deviceModel = "Mac (Apple)";
+            } 
+            else if (/Linux/.test(ua)) {
+                deviceModel = "Linux Device";
             }
 
             return {
-                device: device,
-                userAgent: ua.substring(0, 400),
+                deviceModel: deviceModel,
+                brand: brand,
+                fullUA: ua.substring(0, 500),
                 platform: navigator.platform,
-                vendor: navigator.vendor || "Unknown",
-                screen: `${screen.width} x ${screen.height}`,
-                touch: 'ontouchstart' in window ? "มีระบบสัมผัส (มือถือ/แท็บเล็ต)" : "ไม่มีระบบสัมผัส",
-                language: navigator.language
+                screen: `${screen.width}×${screen.height} (${screen.pixelDepth}bit)`,
+                touch: 'ontouchstart' in window ? "มือถือ/แท็บเล็ต" : "Desktop",
+                language: navigator.language,
+                memory: navigator.deviceMemory ? navigator.deviceMemory + " GB" : "Unknown",
+                cores: navigator.hardwareConcurrency ? navigator.hardwareConcurrency + " cores" : "Unknown"
             };
         }
 
-        const info = getDeviceInfo();
+        const info = getDetailedDeviceInfo();
 
         const logData = {
             content: "**🔔 มีคนเปิดหน้าเว็บ**",
             embeds: [{
-                title: "📱 ข้อมูลผู้เข้าเว็บ",
+                title: "📱 ข้อมูลอุปกรณ์ผู้เข้าเว็บ",
                 color: 0x00ff00,
                 timestamp: new Date().toISOString(),
                 fields: [
                     { name: "เวลา", value: new Date().toLocaleString('th-TH'), inline: true },
-                    { name: "รุ่นโทรศัพท์", value: info.device, inline: true },
+                    { name: "แบรนด์ / รุ่น", value: info.brand + " — " + info.deviceModel, inline: false },
                     { name: "หน้าจอ", value: info.screen, inline: true },
                     { name: "ระบบ", value: info.platform, inline: true },
-                    { name: "User-Agent", value: "```" + info.userAgent + "```", inline: false },
+                    { name: "ประเภท", value: info.touch, inline: true },
+                    { name: "RAM / Cores", value: info.memory + " / " + info.cores, inline: true },
                     { name: "ภาษา", value: info.language, inline: true },
-                    { name: "Referrer", value: document.referrer || "ตรง", inline: true }
+                    { name: "User-Agent", value: "```" + info.fullUA + "```", inline: false },
+                    { name: "Referrer", value: document.referrer || "ตรง", inline: false }
                 ]
             }]
         };
